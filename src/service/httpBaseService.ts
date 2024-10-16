@@ -8,7 +8,7 @@ export abstract class HTTPBaseService {
   protected readonly baseURL: string | undefined | boolean
 
   public constructor() {
-    this.baseURL = import.meta.env.VITE_BACK_ENDPOINT
+    this.baseURL = 'https://certificados-documentintelligence.azurewebsites.net'
     this.instance = axios.create({
       baseURL: `${this.baseURL}/`
       // baseURL: `${this.baseURL}`
