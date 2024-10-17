@@ -56,7 +56,6 @@ import { useCertificateStore } from '@/stores/certificateStore'
 import IconEye from '@/components/IconEye.vue'
 import TheSideMenu from '@/components/TheSideMenu.vue'
 import CertificateChecks from '@/components/CertificateChecks.vue'
-// import certificateValidationData from '@/assets/certificatePoC.json'
 
 // STORE
 const { showCertificateChecks, certificatePoCValidation } = storeToRefs(useCertificateStore())
