@@ -11,7 +11,6 @@ export abstract class HTTPBaseService {
     this.baseURL = 'https://certificados-documentintelligence.azurewebsites.net'
     this.instance = axios.create({
       baseURL: `${this.baseURL}/`
-      // baseURL: `${this.baseURL}`
     })
     this.maxRecallNumber = 5
     this.numberOfCalls = 0
