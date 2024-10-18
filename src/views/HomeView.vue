@@ -81,6 +81,7 @@ async function onFileChange(event: Event) {
   loading.value = true
 
   const target = event.target as HTMLInputElement
+
   if (target.files && target.files.length > 0) {
     uploadFile.value = target.files[0]
     const reader = new FileReader()
@@ -116,36 +117,6 @@ async function onFileChange(event: Event) {
       })
   }
 }
-
-// async function onFileChange(event: Event) {
-//   loading.value = true
-
-//   setTimeout(() => {
-//     try {
-//       const target = event.target as HTMLInputElement
-//       if (target.files && target.files.length > 0) {
-//         const file = target.files[0]
-//         const reader = new FileReader()
-
-//         // console.log(file)
-//         documents.value.length === 0 ? documents.value.push(file) : (documents.value[0] = file)
-
-//         reader.onload = () => {
-//           // Guardar el archivo como base64 en localStorage
-//           localStorage.setItem('uploadedFile', reader.result as string)
-//           fileData.value = reader.result as string // Solo para mostrar imágenes
-//         }
-
-//         reader.readAsDataURL(file)
-//       }
-//     } catch {
-//       console.log('Error al subir archivo')
-//     } finally {
-//       certificatePoCValidation.value = certificateValidationData
-//       loading.value = false
-//     }
-//   }, 2000)
-// }
 
 function handleOpen() {
   showCertificateChecks.value = true
