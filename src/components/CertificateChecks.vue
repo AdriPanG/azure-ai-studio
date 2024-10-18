@@ -98,15 +98,6 @@
 
         <!-- CERTIFICADO ADR -->
         <div v-if="certificatePoCValidation?.docType === docTypeEnum.ADR" class="section-container">
-          <!-- <div class="section-wrapper">
-            <span class="section-title">Certificado ADR</span>
-            <ul class="items-list">
-              <li class="item" v-for="[key, value] in filteredExtractedFields" :key="key">
-                <b>{{ findFieldByKey(key) }}:</b>
-                {{ value }}
-              </li>
-            </ul>
-          </div> -->
           <div class="section-wrapper">
             <ul class="items-list">
               <li class="item" v-for="item in adrCertificateData.section1" :key="item.key">
@@ -168,6 +159,10 @@
                 "
               />
             </ul>
+          </div>
+          <div class="buttons">
+            <button class="button" @click="handleClose">Rechazar documento</button>
+            <button class="button" @click="handleClose">Validar documento</button>
           </div>
         </div>
       </div>
