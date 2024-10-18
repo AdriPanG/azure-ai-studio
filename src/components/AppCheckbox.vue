@@ -1,8 +1,17 @@
 <template>
   <label class="container" :class="{ checked: validated }">
     {{ fullTitle }}
-    <input :class="{ checked: validated }" type="checkbox" :value="id" @click="onCheck()" />
-    <span class="checkmark"></span>
+    <input
+      :class="{ checked: validated }"
+      :disabled="disabled"
+      type="checkbox"
+      :value="id"
+      @click="onCheck()"
+    />
+    <span
+      :class="{ 'error-input': errors.includes(title), disabled: disabled }"
+      class="checkmark"
+    ></span>
   </label>
 </template>
 
@@ -19,6 +28,9 @@ const props = defineProps({
     type: Boolean,
     required: true
   },
+  disabled: {
+    type: Boolean
+  },
   id: {
     type: Number
     // required: true,
@@ -26,6 +38,10 @@ const props = defineProps({
   required: {
     type: Boolean,
     default: false
+  },
+  errors: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -57,6 +73,11 @@ function onCheck() {
   cursor: pointer;
   font-size: 16px;
   color: $c-grey-70;
+
+  &.disabled {
+    cursor: auto;
+    color: $c-grey-50;
+  }
 }
 .container input {
   display: none;
@@ -71,11 +92,13 @@ function onCheck() {
   background-color: $c-turquoise-20;
   border: 1px solid $c-turquoise-60;
   border-radius: 4px;
+
   &.disabled {
     background-color: $c-grey-30;
     border: 1px solid $c-grey-30;
   }
 }
+
 /* Create the checkmark/indicator (hidden when not checked) */
 .checkmark:after {
   content: '';
@@ -93,6 +116,39 @@ function onCheck() {
   width: 8px;
   height: 16px;
   border: solid $c-turquoise-80;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.container .checkmark.disabled:after {
+  left: 7px;
+  top: 1px;
+  width: 8px;
+  height: 16px;
+  border: solid $c-white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.error-input {
+  border: 1px solid $c-error;
+  background-color: rgba(255, 0, 0, 0.323);
+}
+.error-input :after {
+  content: '';
+  position: absolute;
+  display: none;
+}
+.container .checked ~ .error-input:after {
+  display: block;
+}
+
+.container .error-input:after {
+  left: 8px;
+  top: 2px;
+  width: 8px;
+  height: 16px;
+  border: solid $c-error;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }

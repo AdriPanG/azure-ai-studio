@@ -1,30 +1,62 @@
 <template>
   <div class="page-wrapper">
     <div class="document-detail">
-      <!-- DOCUMENT IMAGE -->
+      <!-- IMAGEN DEL DOCUMENTO -->
       <div class="image-wrapper">
-        <figure ref="zoomImg" class="zoom-image" :style="[`background-image: ${backgroundImgCss}`]">
+        <figure
+          v-if="!originalImg.startsWith('data:application/pdf')"
+          ref="zoomImg"
+          class="zoom-image"
+          :style="[`background-image: ${backgroundImgCss}`]"
+        >
           <img :src="rotatedImg" class="static-image" />
         </figure>
+        <div class="zoom-buttons">
+          <button @click="zoomOut()">-</button>
+          <button @click="zoomIn()">+</button>
+        </div>
         <iframe
+          id="iframe"
+          :key="iframeKey"
           class="pdf-image"
-          :src="originalImg + `#toolbar=0&navpanes=0`"
+          :src="iframeSrc"
           frameborder="0"
           allow="fullscreen"
         >
         </iframe>
       </div>
 
-      <!-- DOCUMENT CHECKBOXES -->
       <div class="validation-wrapper">
         <div class="doc-number">
-          <h3 class="title">Nº albarán: 25098758</h3>
+          <h3 class="title">
+            {{
+              certificatePoCValidation?.docType === docTypeEnum.ADR
+                ? 'Certificado ADR'
+                : 'Certificado de Lavado'
+            }}
+          </h3>
           <div class="detail-header-icons">
             <img class="icon-close" src="@/assets/icons/close.svg" @click="handleClose" />
           </div>
         </div>
 
-        <div v-if="!loadingCheckValidation" class="section-container">
+        <!-- CERTIFICADO DE LAVADO -->
+        <div
+          v-if="certificatePoCValidation?.docType === docTypeEnum.CertificadoLavado"
+          class="section-container"
+        >
+          <div class="section-wrapper">
+            <ul class="items-list">
+              <li class="item" v-for="item in washingCertificateData" :key="item.field">
+                <b>{{ item.field }}:</b>
+                {{
+                  item.key === 'Conductor'
+                    ? cleanName(certificatePoCValidation?.extractedFields[item.key]?.toUpperCase())
+                    : certificatePoCValidation?.extractedFields[item.key]?.toUpperCase()
+                }}
+              </li>
+            </ul>
+          </div>
           <div
             class="section-wrapper"
             v-for="(section, index) in currentCertificate.sections"
@@ -40,15 +72,16 @@
                 :title="item.title"
                 :validated="item.validated"
                 :required="item.required"
+                :errors="errors"
                 @click="checkValidationPoint(item.id, section.id)"
               />
             </div>
           </div>
           <div class="prohibited-wrapper">
             <span class="section-title">Códigos prohibidos</span>
-            <ul class="prohibited-list">
+            <ul class="items-list">
               <li
-                class="prohibited-code-item"
+                class="item"
                 v-for="(item, index) in currentCertificate.prohibitedCodes"
                 :key="index"
               >
@@ -63,8 +96,74 @@
           </div>
         </div>
 
-        <div v-else>
-          <AppLoader :position="convertVhToPx(40)" />
+        <!-- CERTIFICADO ADR -->
+        <div v-if="certificatePoCValidation?.docType === docTypeEnum.ADR" class="section-container">
+          <div class="section-wrapper">
+            <ul class="items-list">
+              <li class="item" v-for="item in adrCertificateData.section1" :key="item.key">
+                <b>{{ item.field }}:</b>
+                {{ certificatePoCValidation.extractedFields[item.key] }}
+              </li>
+            </ul>
+          </div>
+          <div class="section-wrapper">
+            <span class="section-title"><b>Descripción del vehículo:</b></span>
+            <ul class="items-list">
+              <li class="item" v-for="item in adrCertificateData.section3" :key="item.key">
+                {{ certificatePoCValidation.extractedFields[item.key] }}
+              </li>
+            </ul>
+          </div>
+          <div class="section-wrapper">
+            <span class="section-title"><b>Dispositivo de frenos de resistencia:</b></span>
+            <ul class="items-list">
+              <AppCheckbox
+                class="checkbox"
+                :title="adrCertificateData.section5[0].field"
+                :disabled="true"
+                :validated="
+                  certificatePoCValidation.extractedFields[adrCertificateData.section5[0].key] ===
+                  ':selected:'
+                    ? true
+                    : false
+                "
+              />
+              <AppCheckbox
+                class="checkbox"
+                :title="`${adrCertificateData.section5[1].field} 
+                  ${certificatePoCValidation.extractedFields[adrCertificateData.section5[2].key] ? certificatePoCValidation.extractedFields[adrCertificateData.section5[2].key] : '________________'} 
+                  t`"
+                :disabled="true"
+                :validated="
+                  certificatePoCValidation.extractedFields[adrCertificateData.section5[1].key] ===
+                  ':selected:'
+                    ? true
+                    : false
+                "
+              />
+            </ul>
+          </div>
+          <div class="section-wrapper">
+            <span class="section-title"
+              ><b>Mercancías peligrosas autorizadas para su transporte:</b></span
+            >
+            <ul class="items-list">
+              <AppCheckbox
+                v-for="item in adrCertificateData.section7"
+                :key="item.key"
+                class="checkbox"
+                :title="item.field"
+                :disabled="true"
+                :validated="
+                  certificatePoCValidation.extractedFields[item.key] === ':selected:' ? true : false
+                "
+              />
+            </ul>
+          </div>
+          <div class="buttons">
+            <button class="button" @click="handleClose">Rechazar documento</button>
+            <button class="button" @click="handleClose">Validar documento</button>
+          </div>
         </div>
       </div>
     </div>
@@ -77,7 +176,6 @@ import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch, type ComputedRef, type Ref } from 'vue'
 import { useCertificateStore } from '@/stores/certificateStore'
 import AppCheckbox from './AppCheckbox.vue'
-import AppLoader from './AppLoader.vue'
 
 // STORE
 const { showCertificateChecks, currentCertificate, certificatePoCValidation } =
@@ -87,6 +185,7 @@ const { showCertificateChecks, currentCertificate, certificatePoCValidation } =
 interface ValidationPoint {
   title: string
   isValidated: boolean
+  required: boolean
 }
 
 interface ExtractedFieldPoint {
@@ -108,6 +207,11 @@ interface AllPoints {
   pocPoint: ExtractedFieldPoint
 }
 
+enum docTypeEnum {
+  CertificadoLavado = 'CertificadoLavado',
+  ADR = 'ADR'
+}
+
 // PROPS
 const props = defineProps({
   fileUrl: {
@@ -120,74 +224,13 @@ const props = defineProps({
 const originalImg: Ref<string> = ref('')
 const rotatedImg: Ref<string> = ref('')
 const zoomImg: Ref<HTMLElement> = ref({} as HTMLElement)
-const loadingCheckValidation: Ref<boolean> = ref(false)
+const zoomPdf: Ref<number> = ref(75)
+const iframeKey: Ref<number> = ref(0)
+
 const errors: Ref<string[]> = ref([])
 const errorMsg: Ref<string> = ref('')
+
 const PoCValidationDone: Ref<boolean> = ref(false)
-
-// HOOKS
-onMounted(() => {
-  if (props.fileUrl) {
-    originalImg.value = props.fileUrl
-    rotatedImg.value = props.fileUrl
-  }
-
-  // console.log(certificatePoCValidation.value?.extractedFields)
-})
-
-// WATCHERS
-watch(originalImg, async (newImg, oldImg) => {
-  if (newImg) {
-    createZoomEvent()
-  }
-})
-
-// COMPUTED
-const backgroundImgCss: ComputedRef<string> = computed(() => `url(${rotatedImg.value})`)
-
-// METHODS
-function handleClose() {
-  showCertificateChecks.value = false
-}
-
-function checkValidationPoint(id: number, sectionId: number) {
-  let validationPoint = currentCertificate.value.sections
-    .find((item) => item.id === sectionId)
-    ?.validationPoints.find((item) => item.id === id)
-
-  if (validationPoint) validationPoint.validated = !validationPoint.validated
-}
-
-function createZoomEvent() {
-  zoomImg.value?.addEventListener('mousemove', function (event: MouseEvent) {
-    const targetElement = event.currentTarget as HTMLImageElement
-    if (targetElement) {
-      let x = (event.offsetX / targetElement.offsetWidth) * 100
-      let y = (event.offsetY / targetElement.offsetHeight) * 100
-      targetElement.style.backgroundPosition = x + '% ' + y + '%'
-    }
-  })
-}
-
-function convertVhToPx(valueInVh: number, viewportHeight: number | null = null): number {
-  const oneVhInPx =
-    (viewportHeight || window.innerHeight || document.documentElement.clientHeight) / 100
-  const valueInPx = oneVhInPx * valueInVh
-  return valueInPx
-}
-
-function getValidatedChecks() {
-  let pointArr: ValidationPoint[] = []
-  currentCertificate.value.sections.forEach((section) => {
-    section.validationPoints.forEach((point) => {
-      pointArr.push({ title: point.title, isValidated: point.validated })
-    })
-  })
-
-  // console.log(pointArr)
-  return pointArr
-}
-
 const washingCertificateCodes = [
   'C01',
   'C10',
@@ -221,12 +264,180 @@ const washingCertificateCodes = [
   'P40',
   'W50'
 ]
-
 const prohibitedCodes = ['C01', 'C10', 'C20', 'F51']
+const washingCertificateData = [
+  { field: 'ET', key: 'Nombre' },
+  { field: 'Conductor', key: 'Conductor' },
+  { field: 'Producto', key: 'Producto' },
+  { field: 'Matrícula Vehículo', key: 'Vehículo' },
+  { field: 'Matrícula Cisterna/Contenedor', key: 'Cisterna/Contenedor' }
+]
+
+const adrCertificateData = {
+  section1: [
+    { field: 'Certificado Nº', key: 'Numero_certificado' },
+    { field: 'Constructor del Vehículo', key: 'Constructor_vehiculo' },
+    { field: 'Nº Identificación del Vehículo', key: 'Identificacion_vehiculo' },
+    { field: 'Nº de Matrícula', key: 'Matricula' }
+  ],
+  section2: [
+    { field: 'Nombre de la sede social del transportista, usuario o propietario', key: 'Nombre' },
+    {
+      field: 'Domicilio de la sede social del transportista, usuario o propietario',
+      key: 'Domicilio'
+    }
+  ],
+  section3: [{ field: 'Descripción del vehículo', key: 'Descripcion_vehiculo' }],
+  section4: [
+    {
+      field: 'Designación(es) del vehículo según el 9.1.1.2 del ADR',
+      key: 'Designaciones_vehiculo'
+    }
+  ],
+  section5: [
+    {
+      field: 'No aplicable',
+      key: 'Disp_frenos_resistencia_no_aplicable'
+    },
+    {
+      field:
+        'La eficacia según 9.2.3.1.2 del ADR es suficiente para un peso total de la unidad de transporte de',
+      key: 'Disp_frenos_resistencia_eficacia_suficiente'
+    },
+    { field: 'Peso total', key: 'Peso_total' }
+  ],
+  section6: [
+    {
+      field: 'Descripción de la cisterna fija/vehículo batería (si procede)',
+      key: 'Descripción_cisterna_fija_vehiculo_bateria'
+    }
+  ],
+  section7: [
+    {
+      field: 'Mercancías de la clase 1, incluyendo el grupo de compatibilidad J',
+      key: 'Mercancias_clase_1_incl_grupo_comp_j'
+    },
+    {
+      field: 'Mercancías de la clase 1, exceptuando el grupo de compatibilidad J',
+      key: 'Mercancias_clase_1_excep_grupo_comp_j'
+    },
+    {
+      field:
+        'Solamente se podrán transportar (5) las materias autorizadas de acuerdo con el código de cisterna y cualquier disposición especial indicada en el Nº9',
+      key: 'Solo_trans_materias_autorizadas'
+    },
+    {
+      field:
+        'Solamente se podrán transportar las materias siguientes (Clase, Nº ONU, y si fuera necesario el grupo de embalaje y la designación oficial de transporte): Este certificado se complementa con un listado de 8 Mercancías Peligrosas.',
+      key: 'Solo_trans_materias_siguientes'
+    }
+  ],
+  section8: [
+    { field: 'Observaciones', key: 'Observaciones' },
+    { field: 'Válido hasta', key: 'Valido_hasta' }
+  ],
+  section9: [
+    { field: 'Validez prorrogada hasta', key: 'Validez_prorrogada_hasta_1' },
+    { field: 'Validez prorrogada hasta', key: 'Validez_prorrogada_hasta_2' },
+    { field: 'Validez prorrogada hasta', key: 'Validez_prorrogada_hasta_3' },
+    { field: 'Validez prorrogada hasta', key: 'Validez_prorrogada_hasta_4' },
+    { field: 'Validez prorrogada hasta', key: 'Validez_prorrogada_hasta_5' },
+    { field: 'Observaciones: (Continuación)', key: 'Observaciones_continuacion' }
+  ]
+}
+
+// HOOKS
+onMounted(() => {
+  if (props.fileUrl) {
+    originalImg.value = props.fileUrl
+    rotatedImg.value = props.fileUrl
+    console.log(originalImg.value)
+  }
+
+  currentCertificate.value.sections.forEach((section) => {
+    section.validationPoints.forEach((validationPoint) => {
+      validationPoint.validated = false
+    })
+  })
+})
+
+// WATCHERS
+watch(originalImg, async (newImg, oldImg) => {
+  if (newImg) {
+    createZoomEvent()
+  }
+})
+
+// COMPUTED
+const backgroundImgCss: ComputedRef<string> = computed(() => `url(${rotatedImg.value})`)
+const iframeSrc = computed(() => {
+  return originalImg.value + `#toolbar=0&navpanes=0&zoom=${zoomPdf.value}`
+})
+
+// METHODS
+function handleClose() {
+  showCertificateChecks.value = false
+}
+
+function zoomIn() {
+  zoomPdf.value += 25
+  iframeKey.value++
+}
+
+function zoomOut() {
+  if (zoomPdf.value > 25) zoomPdf.value -= 25
+  iframeKey.value++
+}
+
+function cleanName(name: string | undefined): string | undefined {
+  const prefixs = ['NAP', 'NAM', 'NAME']
+
+  if (!name) return
+
+  for (const prefix of prefixs) {
+    if (name.startsWith(prefix)) {
+      return name.slice(prefix.length)
+    }
+  }
+
+  return name
+}
+
+function checkValidationPoint(id: number, sectionId: number) {
+  let validationPoint = currentCertificate.value.sections
+    .find((item) => item.id === sectionId)
+    ?.validationPoints.find((item) => item.id === id)
+
+  if (validationPoint) validationPoint.validated = !validationPoint.validated
+}
+
+function createZoomEvent() {
+  zoomImg.value?.addEventListener('mousemove', function (event: MouseEvent) {
+    const targetElement = event.currentTarget as HTMLImageElement
+    if (targetElement) {
+      let x = (event.offsetX / targetElement.offsetWidth) * 100
+      let y = (event.offsetY / targetElement.offsetHeight) * 100
+      targetElement.style.backgroundPosition = x + '% ' + y + '%'
+    }
+  })
+}
+
+function getValidatedChecks() {
+  let pointArr: ValidationPoint[] = []
+  currentCertificate.value.sections.forEach((section) => {
+    section.validationPoints.forEach((point) => {
+      pointArr.push({ title: point.title, isValidated: point.validated, required: point.required })
+    })
+  })
+
+  // console.log(pointArr)
+  return pointArr
+}
 
 function handleValidationCheck() {
   if (!PoCValidationDone.value) {
     PoCValidationDone.value = true
+
     getProhibitedCodes()
     getValidationPoints()
 
@@ -234,7 +445,7 @@ function handleValidationCheck() {
 
     if (errors.value.length > 0) {
       errorMsg.value =
-        'Se notaron algunas diferencias entre el documento y la validación. Por favor, revisar para evitar errores.'
+        'Se notaron algunas diferencias entre el documento y la validación. Por favor, te sugerimos revisarlo nuevamente para evitar posibles errores.'
     }
   } else handleClose()
 }
@@ -281,6 +492,7 @@ function getValidationPoints() {
       })
     }
   })
+  console.log('COMMON', validationPointsArray)
 
   validationPointsArray.forEach((points: AllPoints) => {
     if (points.pocPoint.value) {
@@ -295,12 +507,6 @@ function getValidationPoints() {
 </script>
 
 <style lang="scss" scoped>
-.error-text {
-  text-align: left;
-  color: $c-error;
-  font-weight: bold;
-  font-size: 16px;
-}
 .page-wrapper {
   background-color: $c-grey-10;
   padding: 2rem 1rem;
@@ -318,6 +524,28 @@ function getValidationPoints() {
     .image-wrapper {
       position: relative;
       width: 45%;
+
+      .zoom-buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+
+        & button {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 20px;
+          height: 2rem;
+          border: none;
+          cursor: pointer;
+          border-radius: 8px;
+          padding: 0 1.2rem;
+          font-weight: bold;
+          background-color: $c-turquoise-20;
+        }
+      }
 
       .pdf-image {
         width: 100%;
@@ -359,8 +587,6 @@ function getValidationPoints() {
       .section-container {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
-        margin-bottom: 1rem;
 
         & .buttons {
           display: flex;
@@ -394,6 +620,7 @@ function getValidationPoints() {
           text-align: left;
           display: flex;
           flex-direction: column;
+          margin-bottom: 1.5rem;
 
           .section-title {
             font-size: 16px;
@@ -414,30 +641,33 @@ function getValidationPoints() {
               font-size: 16px;
             }
           }
-
-          &:nth-child(1) {
-            .validation-list {
-              display: flex;
-              flex-direction: row;
-              flex-wrap: wrap;
-            }
-          }
         }
 
         .prohibited-wrapper {
           text-align: left;
+        }
 
-          ul {
-            background-color: $c-white;
-            display: flex;
-            flex-direction: column;
-            padding: 1rem 1.5rem;
-            list-style: disc;
+        .items-list {
+          background-color: $c-white;
+          display: flex;
+          flex-direction: column;
+          padding: 1rem 1.5rem;
+          list-style: disc;
 
-            .prohibited-code-item {
-              margin: 0.3rem 0.7rem;
-            }
+          .item {
+            margin: 0.3rem 0.7rem;
           }
+
+          & label {
+            margin-bottom: 10px;
+          }
+        }
+
+        .error-text {
+          text-align: left;
+          color: $c-error;
+          font-weight: bold;
+          font-size: 16px;
         }
       }
 

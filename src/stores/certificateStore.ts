@@ -22,6 +22,7 @@ interface Certificate {
 interface CertificateValidation {
   legibilityStatus: boolean
   message: string
+  docType: string
   extractedFields: {
     [key: string]: string | null
   }

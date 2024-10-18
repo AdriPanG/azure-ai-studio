@@ -2,54 +2,6 @@
   "sections": [
     {
       "id": 1,
-      "title": "Certificado de lavado",
-      "validationPoints": [
-        {
-          "id": 20,
-          "title": "ET: Pañalón",
-          "required": true,
-          "validated": false
-        },
-        {
-          "id": 21,
-          "title": "Vehículo: 2470KDC",
-          "required": true,
-          "validated": false
-        },
-        {
-          "id": 22,
-          "title": "Cisterna: R6905BCR",
-          "required": true,
-          "validated": false
-        },
-        {
-          "id": 23,
-          "title": "Documento original",
-          "required": true,
-          "validated": false
-        },
-        {
-          "id": 24,
-          "title": "EFTCO",
-          "required": true,
-          "validated": false
-        },
-        {
-          "id": 25,
-          "title": "SQAS",
-          "required": true,
-          "validated": false
-        },
-        {
-          "id": 26,
-          "title": "OCS",
-          "required": true,
-          "validated": false
-        }
-      ]
-    },
-    {
-      "id": 2,
       "title": "Verificado lavado plásticos",
       "validationPoints": [
         {
@@ -132,26 +84,26 @@
         },
         {
           "id": 13,
-          "title": "E75 Cambio junta tapa superior (si aplica, por estar en mal estado o por olor)",
-          "required": true,
-          "validated": false
-        },
-        {
-          "id": 14,
           "title": "F01 Lavado con agua potable",
           "required": true,
           "validated": false
         },
         {
-          "id": 15,
+          "id": 14,
           "title": "F50 Detergente alimentario",
           "required": true,
           "validated": false
         },
         {
-          "id": 16,
+          "id": 15,
           "title": "W50 Depuración aguas",
           "required": true,
+          "validated": false
+        },
+        {
+          "id": 16,
+          "title": "E75 Cambio junta tapa superior (si aplica, por estar en mal estado o por olor)",
+          "required": false,
           "validated": false
         }
       ]
