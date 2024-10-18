@@ -445,7 +445,7 @@ function handleValidationCheck() {
 
     if (errors.value.length > 0) {
       errorMsg.value =
-        'Se notaron algunas diferencias entre el documento y la validación. Por favor, te sugerimos revisarlo nuevamente para evitar posibles errores.'
+        'Se identificaron uno o más códigos prohibidos y/o algunas diferencias entre el documento y la validación. Por favor, te sugerimos revisarlo nuevamente para evitar posibles errores.'
     }
   } else handleClose()
 }
@@ -492,7 +492,7 @@ function getValidationPoints() {
       })
     }
   })
-  console.log('COMMON', validationPointsArray)
+  // console.log('COMMON', validationPointsArray)
 
   validationPointsArray.forEach((points: AllPoints) => {
     if (points.pocPoint.value) {

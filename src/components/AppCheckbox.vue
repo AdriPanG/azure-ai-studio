@@ -1,5 +1,5 @@
 <template>
-  <label class="container" :class="{ checked: validated }">
+  <label class="container" :class="{ checked: validated, disabled: disabled }">
     {{ fullTitle }}
     <input
       :class="{ checked: validated }"
@@ -75,8 +75,7 @@ function onCheck() {
   color: $c-grey-70;
 
   &.disabled {
-    cursor: auto;
-    color: $c-grey-50;
+    cursor: default;
   }
 }
 .container input {
